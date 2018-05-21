@@ -1,0 +1,30 @@
+CC=g++
+
+BUILD=/home/HCU08/u966156/HCU08_Group1_DIS
+
+CFLAGS= -pipe -c
+
+SOURCES= AppClasses/Account/Cpp/Account.cpp Controller/AccountController/Cpp/AccountController.cpp ExceptionClasses/SqlError/Cpp/SqlError.cpp Main/Cpp/Main.cpp Model/Cpp/DB.cpp UI/AccountUI/Cpp/AccountUI.cpp UI/MainUI/Cpp/MainUI.cpp Utility/Cpp/Utility.cpp AppClasses/Seeker/Cpp/Seeker.cpp Controller/SeekerController/Cpp/SeekerController.cpp UI/SeekerUI/Cpp/SeekerUI.cpp
+
+OBJECTS=$(BUILD)/Account.o $(BUILD)/AccountController.o $(BUILD)/SqlError.o $(BUILD)/Main.o $(BUILD)/DB.o $(BUILD)/AccountUI.o $(BUILD)/MainUI.o $(BUILD)/Utility.o $(BUILD)/Seeker.o $(BUILD)/SeekerController.o $(BUILD)/SeekerUI.o 
+
+EXECUTABLE= DIS.o
+
+all: $(SOURCES) $(EXECUTABLE)
+
+$(EXECUTABLE): $(OBJECTS)
+
+	$(CC) $(OBJECTS) -L /usr/lib/oracle/11.2/client64/lib -lclntsh -o $@
+
+.cpp.o:
+
+	$(CC) $(CFLAGS) $(SOURCES) -I /usr/include/oracle/11.2/client64
+
+DB.cpp=DB.pc
+
+        proc CODE=cpp CPP_SUFFIX=cpp PARSE=NONE DB.pc
+
+clean:
+ 
+	rm -f $(OBJECTS) $(EXECUTABLE)
+

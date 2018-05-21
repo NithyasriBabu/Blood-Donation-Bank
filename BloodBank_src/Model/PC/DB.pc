@@ -1,0 +1,706 @@
+#include "../Include/DB.h"
+#include "../../GlobalDefs/Include/GlobalDefs.h"
+#include "../../ExceptionClasses/SqlError/Include/SqlError.h"
+#include "../../AppClasses/Account/Include/Account.h"
+#include "../../AppClasses/Seeker/Include/Seeker.h"
+#include "../../UI/AccountUI/Include/AccountUI.h"
+#include "../../AppClasses/Hospital/Include/Hospital.h"
+
+#include <sqlca.h>
+#include <sqlcpr.h>
+#include <string.h>
+#include<vector>
+
+// Defining Static Variables
+
+string DB::m_dbUsername = "";   
+string DB::m_dbPassword = ""; 
+bool DB::m_DbConnected = false;
+
+void DB::initializeDBConnection(string p_Username, string p_Password)
+{
+  m_dbUsername = p_Username;
+  m_dbPassword = p_Password;
+}
+
+void DB::dbConnect()
+{
+  EXEC SQL BEGIN DECLARE SECTION;
+    char h_Username[20];
+    char h_Password[7];
+  EXEC SQL END DECLARE SECTION;
+  strcpy(h_Username,m_dbUsername.c_str());
+  strcpy(h_Password,m_dbPassword.c_str());
+
+  EXEC SQL CONNECT :h_Username IDENTIFIED BY :h_Password ;
+
+  if(sqlca.sqlcode != 0)
+    throw ( SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31mDatabase Connection Failed\033[0m" ) );
+
+  m_DbConnected = true;
+}
+
+void DB::dbDisconnect()
+{
+  if(m_DbConnected)
+  {
+   EXEC SQL COMMIT WORK RELEASE;
+   m_DbConnected = false;
+  }
+}
+
+void DB::dbCheckLogin(Account &a)
+{
+  EXEC SQL BEGIN DECLARE SECTION;
+    long h_Username;
+    char* h_Password;
+    long uph;
+    char uname[20];
+    char uloc[20];
+    char blg[10];
+    char st;
+    char ld[12];
+    char ll[50];
+  EXEC SQL END DECLARE SECTION;
+
+  h_Username=a.getUphno();
+  strcpy(h_Password, a.getUpass().c_str());
+
+  EXEC SQL SELECT UNAME,UPHNO,ULOCATION,UBL_GR,STATUS,LDOD,LASTLOGIN INTO :uname,:uph,:uloc,:blg,:st,:ld,:ll FROM USERDB WHERE UPHNO=:h_Username AND UPASS=:h_Password;
+
+  if(sqlca.sqlcode != 0)
+    throw ( SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31m\n\n\t\tLogin has failed\n\n\033[0m" ) );
+
+
+   EXEC SQL UPDATE USERDB SET LASTLOGIN=(SELECT TO_CHAR(CURRENT_TIMESTAMP,'DAY DD-MON-YYYY HH:MM:SS') FROM DUAL) WHERE UPHNO=:h_Username;
+   EXEC SQL COMMIT;
+
+  if(sqlca.sqlcode != 0)
+    throw ( SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31m\n\n\t\tLogin Time Update failed\n\n\033[0m" ) );
+
+
+   a.setUname(string(uname));
+   a.setUphno(uph);
+   a.setUlocation(string(uloc));
+   a.setUblood_group(string(blg));
+   a.setUldod(string(ld));
+   a.setStatus(st);
+   a.setLastLogin(string(ll));
+
+}
+
+void DB::dbRegister(Account aobj)
+{
+   EXEC SQL BEGIN DECLARE SECTION;
+    char unam[20];
+    long uph;
+    char ublg[10];
+    char uloc[20];
+    char ld[15];
+    char st;
+    char up[20];
+    char ll[40];
+   EXEC SQL END DECLARE SECTION;
+
+    strcpy(unam,aobj.getUname().c_str());
+    strcpy(up,aobj.getUpass().c_str());
+    strcpy(ublg,aobj.getUblood_group().c_str());
+    strcpy(uloc,aobj.getUlocation().c_str());
+    strcpy(ld,aobj.getUldod().c_str());
+
+    uph=aobj.getUphno();
+    st=aobj.getStatus();
+
+    EXEC SQL SELECT TO_CHAR(CURRENT_TIMESTAMP,'DAY DD-MON-YYYY HH:MM:SS') INTO :ll from DUAL;
+
+   EXEC SQL INSERT INTO USERDB(uname,uphno,ulocation,ubl_gr,status,ldod,upass,lastlogin) VALUES(:unam,:uph,:uloc,:ublg,:st,:ld,:up,:ll);
+   EXEC SQL COMMIT;
+
+   if(sqlca.sqlcode != 0)
+     throw ( SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31m\n\t\tRegistration has failed...\n\033[0m" ) );
+
+}
+
+int DB::dbValidate(Account accountObj)
+{
+  EXEC SQL BEGIN DECLARE SECTION;
+    long h_Username;
+     int cn;
+  EXEC SQL END DECLARE SECTION;
+
+  h_Username=accountObj.getUphno();
+
+  EXEC SQL SELECT COUNT(*) INTO :cn FROM USERDB WHERE UPHNO=:h_Username;
+  if(cn==0)
+    return SUCCESS;
+  else
+    throw (SqlError(sqlca.sqlcode,sqlca.sqlerrm.sqlerrmc, "\033[1;31m\n\t\tYou are Registered user. Login with your Credentials\033[0m" ));
+
+}
+
+void DB::dbaddTag(Account ito)
+{
+   EXEC SQL BEGIN DECLARE SECTION;
+    long uph,tph;
+   
+   EXEC SQL END DECLARE SECTION;
+    uph=ito.getUphno();
+    tph=ito.getTag_phno();
+   
+    
+     EXEC SQL INSERT INTO TAGGED(UPHNO,TAG) VALUES(:uph,:tph);
+     EXEC SQL COMMIT;    
+
+      if(sqlca.sqlcode != 0)
+        throw ( SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31m\n\t\t"+ito.getUname()+" This Phone Number already tagged to you.\033[0m" ) );
+      
+}
+
+int DB::dbValidateTag(Account accountObj)
+{
+  EXEC SQL BEGIN DECLARE SECTION;
+    long h_Username;
+    long uph;
+    int bg;
+    int bg1;
+    char s;
+  EXEC SQL END DECLARE SECTION;
+
+  uph=accountObj.getUphno();
+  h_Username=accountObj.getTag_phno();
+ 
+  EXEC SQL SELECT COUNT(*) INTO : bg  FROM USERDB WHERE UPHNO=:h_Username;
+  EXEC SQL SELECT STATUS INTO :s  FROM USERDB WHERE UPHNO=:h_Username;
+  
+  EXEC SQL SELECT COUNT(*) INTO :bg1 FROM TAGGED WHERE UPHNO=:uph AND TAG=:h_Username;
+
+  if(bg1==0)
+  {
+     if(bg == 1)
+     {
+        if(s=='y')
+          return SUCCESS;
+        else 
+          return 5;
+     }
+     else
+        return FAILED;  
+  }
+  else return 3;
+}
+
+void DB::dbDelete(Account acd,string p)
+{
+  EXEC SQL BEGIN DECLARE SECTION;
+    long h_Username;
+    char h_Password[7];
+    long uph;
+    int c;
+  EXEC SQL END DECLARE SECTION;
+
+  h_Username=acd.getUphno();
+  strcpy(h_Password, p.c_str());
+
+  EXEC SQL SELECT UPHNO INTO :uph FROM USERDB WHERE UPHNO=:h_Username AND UPASS=:h_Password;
+
+  if(sqlca.sqlcode != 0)
+    throw(SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31mPassword MisMatch..\033[0m" ));
+
+  EXEC SQL SELECT COUNT(*) INTO :c from TAGGED WHERE UPHNO=:uph;
+
+  if(c==0)
+  {
+    EXEC SQL DELETE FROM USERDB WHERE UPHNO=:uph;
+  }
+  else
+  {
+    EXEC SQL DELETE FROM TAGGED WHERE UPHNO=:uph;
+    EXEC SQL DELETE FROM USERDB WHERE UPHNO=:uph;
+  }
+  EXEC SQL COMMIT;
+}
+
+int DB::dbDateCon(string d)
+{
+  EXEC SQL BEGIN DECLARE SECTION;
+     char dat[14];
+     float mb;
+  EXEC SQL END DECLARE SECTION;
+
+  strcpy(dat,d.c_str());
+
+  EXEC SQL SELECT SYSDATE - TO_DATE(:dat,'DD-MON-YYYY') INTO :mb FROM DUAL;
+
+  if(mb<0)
+   return FAILED;
+  else
+   return SUCCESS;
+}
+
+void DB::dbFindTags(Seeker s,vector<Account> &tgl)
+{
+   Account temp;
+
+   EXEC SQL BEGIN DECLARE SECTION;
+      int cnt,cnt1;
+      long sph,aph;
+      long tph;
+      char bg[10],loc[20],loc1[20];
+      char name[20];
+   EXEC SQL END DECLARE SECTION;
+
+   sph=s.getPhno();
+   strcpy(loc1,s.getLocation().c_str());
+
+   EXEC SQL SELECT COUNT(*) INTO :cnt from TAGGED WHERE UPHNO=:sph;
+   EXEC SQL SELECT COUNT(*) INTO :cnt1 from TAGGED WHERE TAG=:sph;
+
+
+   if(cnt>0)
+   {
+	EXEC SQL DECLARE c0 CURSOR FOR SELECT TAG FROM TAGGED WHERE UPHNO=:sph;
+	EXEC SQL OPEN C0;
+
+	for(int i=0;i<cnt;i++)
+	{
+	    EXEC SQL FETCH c0 into :aph;
+	    EXEC SQL SELECT Uname,UBl_Gr,Ulocation into :name,:bg,:loc FROM USERDB WHERE UPHNO=:aph AND ULOCATION=:loc1;
+	    temp.setUname(name);
+	    temp.setUphno(aph);
+	    temp.setUblood_group(bg);
+	    temp.setUlocation(loc);
+	    tgl.push_back(temp);
+	}
+   }
+   else if(cnt1==1)
+   {
+	EXEC SQL SELECT UPHNO INTO :tph FROM TAGGED WHERE TAG=:sph;
+	EXEC SQL SELECT COUNT(*) INTO :cnt from TAGGED WHERE UPHNO=:tph;
+
+	EXEC SQL SELECT Uname,UBl_Gr,Ulocation into :name,:bg,:loc FROM USERDB WHERE UPHNO=:tph AND ULOCATION=:loc1;
+
+	EXEC SQL DECLARE tp1 CURSOR FOR SELECT TAG FROM TAGGED WHERE UPHNO=:tph AND TAG !=:sph;
+
+	EXEC SQL OPEN tp1;
+
+	temp.setUname(name);
+	temp.setUphno(tph);
+	temp.setUblood_group(bg);
+	temp.setUlocation(loc);
+	tgl.push_back(temp);
+
+	for(int i=1;i<cnt;i++)
+	{
+	    EXEC SQL FETCH tp1 into :aph;
+	    EXEC SQL SELECT Uname,UBl_Gr,Ulocation into :name,:bg,:loc FROM USERDB WHERE UPHNO=:aph AND ULOCATION=:loc1;
+	    temp.setUname(name);
+	    temp.setUphno(aph); 
+	    temp.setUblood_group(bg);
+	    temp.setUlocation(loc);
+	    tgl.push_back(temp);
+	}
+
+   }
+   else if(cnt1>1)
+   {
+	EXEC SQL DECLARE tp2 CURSOR FOR SELECT UPHNO FROM TAGGED WHERE TAG=:sph;
+
+	EXEC SQL OPEN tp2;
+
+	for(int i=0;i<cnt1;i++)
+	{
+	    EXEC SQL FETCH tp2 into :aph;
+	    EXEC SQL SELECT Uname,UBl_Gr,Ulocation into :name,:bg,:loc FROM USERDB WHERE UPHNO=:aph AND ULOCATION=:loc1;
+	    temp.setUname(name);
+	    temp.setUphno(aph); 
+	    temp.setUblood_group(bg);
+	    temp.setUlocation(loc);
+	    tgl.push_back(temp);
+	}
+   }
+   else
+   {
+   }
+}
+
+void DB::dbFindDonors(Seeker s,vector<Account> &ld)
+{
+  EXEC SQL BEGIN DECLARE SECTION;
+      long ph;
+      char loc[20];
+      char bg[10];
+      char nam[10];
+      int count;
+  EXEC SQL END DECLARE SECTION;
+
+  EXEC SQL DECLARE c1 CURSOR FOR SELECT Uname,Uphno,Ubl_gr,Ulocation FROM UserDB WHERE Ubl_gr=:bg AND Ulocation=:loc AND MONTHS_BETWEEN(SYSDATE,ldod)>3 AND status='y';
+  
+  Account tmp;
+
+  strcpy(bg,s.getBlood_group().c_str());
+  strcpy(loc,s.getLocation().c_str());
+
+  EXEC SQL SELECT COUNT(*) INTO :count FROM USERDB WHERE Ubl_gr=:bg AND Ulocation=:loc AND MONTHS_BETWEEN(SYSDATE,ldod)>3 AND status='y';
+
+  EXEC SQL OPEN c1;
+  for(int i=0;i<count;i++)
+  {
+	EXEC SQL FETCH c1 INTO :nam,:ph,:bg,:loc;
+	tmp.setUname(nam);
+	tmp.setUphno(ph);
+	tmp.setUblood_group(bg);
+	tmp.setUlocation(loc);
+	ld.push_back(tmp);
+  }
+  EXEC SQL CLOSE c1;
+
+  if(sqlca.sqlcode < 0)
+    throw ( SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31mNo Donors Found for given Location and Blood Group.\033[0m" ) );
+}
+
+void DB::dbUpdateName(Account a,string n)
+
+{
+
+   EXEC SQL BEGIN DECLARE SECTION;
+
+     long lid;
+
+     char name[20];
+
+   EXEC SQL END DECLARE SECTION;
+
+
+   lid=a.getUphno();
+
+   strcpy(name,n.c_str());
+
+
+   EXEC SQL UPDATE USERDB SET UNAME=:name WHERE UPHNO=:lid;
+
+   EXEC SQL COMMIT;
+
+   if(sqlca.sqlcode < 0)
+     throw ( SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31mName Updation Failed\033[0m" ) );
+}
+
+void DB::dbUpdateLocation(Account a,string lo)
+
+{
+
+   EXEC SQL BEGIN DECLARE SECTION;
+
+     long lid;
+
+     char loc[20];
+
+   EXEC SQL END DECLARE SECTION;
+
+
+   lid=a.getUphno();
+
+   strcpy(loc,lo.c_str());
+
+
+   EXEC SQL UPDATE USERDB SET ULOCATION=:loc WHERE UPHNO=:lid;
+
+   EXEC SQL COMMIT;
+
+   if(sqlca.sqlcode < 0)
+     throw ( SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31mLocation Updation Failed\033[0m" ) );
+}
+
+void DB::dbUpdateStatus(Account a,char s)
+
+{
+
+   EXEC SQL BEGIN DECLARE SECTION;
+
+     long lid;
+     
+char st;
+
+   EXEC SQL END DECLARE SECTION;
+
+
+   lid=a.getUphno();
+
+   st=s;
+
+
+   EXEC SQL UPDATE USERDB SET STATUS=:st WHERE UPHNO=:lid;
+
+   EXEC SQL COMMIT;
+
+   if(sqlca.sqlcode < 0)
+     throw ( SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31mStatus Updation Failed\033[0m" ) );
+}
+
+void DB::dbUpdateLdod(Account a,string ld)
+
+{
+   EXEC SQL BEGIN DECLARE SECTION;
+
+      long lid;
+
+      char ldod[20];
+
+   EXEC SQL END DECLARE SECTION;
+
+
+   lid=a.getUphno();
+
+   strcpy(ldod,ld.c_str());
+
+
+   EXEC SQL UPDATE USERDB SET LDOD=:ldod WHERE UPHNO=:lid;
+
+   EXEC SQL COMMIT;
+
+   if(sqlca.sqlcode < 0)
+     throw ( SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31mDate Updation Failed\033[0m" ) );
+}
+
+void DB::dbUpdatePass(Account a,string p)
+
+{
+
+   EXEC SQL BEGIN DECLARE SECTION;
+
+      long lid;
+
+      char pass[20];
+
+   EXEC SQL END DECLARE SECTION;
+
+
+   lid=a.getUphno();
+
+   strcpy(pass,p.c_str());
+
+
+   EXEC SQL UPDATE USERDB SET UPASS=:pass WHERE UPHNO=:lid;
+
+   EXEC SQL COMMIT;
+
+   if(sqlca.sqlcode < 0)
+     throw ( SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31mPassword Updation Failed\033[0m" ));
+}
+
+void DB::dbUntag(Account a)
+
+{
+
+   EXEC SQL BEGIN DECLARE SECTION;
+
+      long tag;
+
+      long lid;
+
+   EXEC SQL END DECLARE SECTION;
+
+
+   lid=a.getUphno();
+
+   tag=a.getTag_phno();
+
+
+   EXEC SQL DELETE FROM TAGGED WHERE UPHNO=:lid AND TAG=:tag;
+
+   if(sqlca.sqlcode != 0)
+     throw ( SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31mInvalid Phone Number.\033[0m" ));
+   EXEC SQL COMMIT;   
+}
+
+string DB::dbNow()
+{
+   EXEC SQL BEGIN DECLARE SECTION;
+      char dnow[20];
+   EXEC SQL END DECLARE SECTION;
+
+   EXEC SQL SELECT TO_CHAR(SYSDATE,'DD-MON-YYYY_HH24:MI:SS') INTO :dnow FROM DUAL;
+
+   return string(dnow);
+}
+
+
+void DB::dbView_Tags(Account a,vector<long>& tags)
+{
+   EXEC SQL BEGIN DECLARE SECTION;
+
+      long tag;
+
+      long lid;
+      int co;
+
+   EXEC SQL END DECLARE SECTION;
+   lid=a.getUphno();
+   EXEC SQL SELECT COUNT(*) INTO :co FROM TAGGED WHERE UPHNO=:lid;
+   if(co==0)
+       throw ( SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31\tmSorry you have not tagged anyone yet.\033[0m" ));
+   else
+   {
+     EXEC SQL DECLARE cur CURSOR FOR SELECT TAG FROM TAGGED WHERE UPHNO=:lid;
+     EXEC SQL OPEN cur;
+     for(;;)
+     {
+      EXEC SQL FETCH cur INTO :tag;
+      if(sqlca.sqlcode==1403)
+      break;
+      tags.push_back(tag);
+     }
+     EXEC SQL CLOSE cur;
+    }
+}
+
+int DB::dbCheckTags(Account a)
+{
+   
+   EXEC SQL BEGIN DECLARE SECTION;
+
+      long lid;
+      int co;
+
+   EXEC SQL END DECLARE SECTION;
+   lid=a.getUphno();
+   EXEC SQL SELECT COUNT(*) INTO :co FROM TAGGED WHERE UPHNO=:lid;
+   if(co==0)
+      return FAILED;
+   else
+      return SUCCESS;
+}
+
+
+void DB::dbFetch(Account &kl,vector<Account> &tgp)
+{
+  
+  Account t;
+   EXEC SQL BEGIN DECLARE SECTION;
+      int cnt;
+      long aph,tp;
+      
+      char bg[10],loc[20];
+      char name[20];
+   EXEC SQL END DECLARE SECTION;
+     aph=kl.getUphno();
+   EXEC SQL SELECT COUNT(*) INTO :cnt from TAGGED WHERE TAG=:aph;
+  
+  if(cnt>0)
+   { 
+	EXEC SQL DECLARE c5 CURSOR FOR SELECT UPHNO FROM TAGGED WHERE TAG=:aph;
+	EXEC SQL OPEN C5;
+
+	for(int i=0;i<cnt;i++)
+	{
+	    EXEC SQL FETCH c5 into :tp;
+	    EXEC SQL SELECT Uname,UBl_Gr,Ulocation into :name,:bg,:loc FROM USERDB WHERE UPHNO=:tp;
+	    t.setUname(name);
+	    t.setUphno(tp);
+	    t.setUblood_group(bg);
+	    t.setUlocation(loc);
+	    tgp.push_back(t);
+	}
+      
+     }
+  
+}
+
+int  DB::dbDel(long p,long l)
+{
+EXEC SQL BEGIN DECLARE SECTION;
+    long uph;long tph;int cn;
+EXEC SQL END DECLARE SECTION;
+
+ uph=p;tph=l;
+EXEC SQL SELECT COUNT(*) INTO :cn FROM USERDB WHERE UPHNO=:uph;
+  if(cn>0)
+ {
+  EXEC SQL DELETE FROM TAGGED WHERE UPHNO=:uph AND TAG=:tph;
+  EXEC SQL COMMIT;
+    return SUCCESS;
+  } 
+ else
+ {if(sqlca.sqlcode < 0)
+     throw ( SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31mUntagging Myself from Others Failed\033[0m" ) );
+   return FAILED;
+}
+
+}
+
+void DB::dbView_Hos(vector<Hospital> &hos)
+{
+   EXEC SQL BEGIN DECLARE SECTION;
+
+    char unam[20];
+    int id;
+    char sda[10];
+    char eda[20];
+    int ap,an,bp,bn,op,on,abp,abn;
+    char lo[20];
+    int co;
+   EXEC SQL END DECLARE SECTION;
+
+   Hospital h;
+
+   EXEC SQL SELECT COUNT(*) INTO :co FROM HOSPITALS;
+   if(co==0)
+       throw ( SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31\tmSorry No Hospitals Found.\033[0m" ));
+   else
+   {
+     EXEC SQL DECLARE hosp CURSOR FOR SELECT HOSID,HOSNAME,HOSLOCATION FROM HOSPITALS;
+     EXEC SQL OPEN hosp;
+     for(;;)
+     {
+      EXEC SQL FETCH hosp INTO :id,:unam,:lo;
+      h.setId(id);
+      h.setName(string(unam));
+      h.setLocation(lo);
+      if(sqlca.sqlcode==1403)
+      break;
+      hos.push_back(h);
+     }
+     EXEC SQL CLOSE hosp;
+    }
+}
+
+void DB::dbAdd_Hos(Hospital hos)
+{
+   EXEC SQL BEGIN DECLARE SECTION;
+    char unam[20];
+    int id;
+    char sda[10];
+    char eda[20];
+    int ap,an,bp,bn,op,on,abp,abn;
+    char lo[20];
+   EXEC SQL END DECLARE SECTION;
+
+    strcpy(unam,hos.getName().c_str());
+    id=hos.getId();
+    strcpy(sda,hos.getSd().c_str());
+    strcpy(eda,hos.getEd().c_str());
+    strcpy(lo,hos.getLocation().c_str());
+    ap=hos.getAp();
+    an=hos.getAn();
+    bp=hos.getBp();
+    bn=hos.getBn();
+    abp=hos.getAbp();
+    abn=hos.getAbn();
+    op=hos.getOp();
+    on=hos.getOn();
+
+   EXEC SQL INSERT INTO HOSPITALS(hosid,hosname,hoslocation) VALUES(:id,:unam,:lo);
+
+   EXEC SQL COMMIT;
+
+   EXEC SQL INSERT INTO BLOODCAMP(hosid,sdate,edate) VALUES(:id,:sda,:eda);
+
+   EXEC SQL COMMIT;
+
+   EXEC SQL INSERT INTO BLOODBANK(hosid,ap,an,bp,bn,abp,abn,op,one) VALUES(:id,:ap,:an,:bp,:bn,:abp,:abn,:op,:on);
+
+   EXEC SQL COMMIT;
+
+   if(sqlca.sqlcode != 0)
+     throw ( SqlError( sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc, "\033[1;31m\n\t\tRegistration has failed...\n\033[0m" ) );
+
+}
