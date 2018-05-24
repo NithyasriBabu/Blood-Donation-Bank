@@ -9,7 +9,9 @@ Installtion Procedure for Database of Blood Bank
 		4. BLOODCAMP - Details about the blood donation camps held at registered hospitals 
 		5. BLOODBANK - Availability of each blood type at registerd hospitals
 	c. Insert data into HOSPITALS, BLOODBANK and BLOODCAMP tables
+	d. Descriptions of the tables defined is given below:
 	
+1) USERDB:
 SQL> desc userdb
  Name                                      Null?    Type
  ----------------------------------------- -------- ----------------------------
@@ -22,19 +24,15 @@ SQL> desc userdb
  UPASS                                              VARCHAR2(10)	//User Login Password
  LASTLOGIN                                          VARCHAR2(50)	//User Last Login Date and Time
 
-
-TAGGED
-
+2) TAGGED
 SQL> desc TAGGED
  Name                                      Null?    Type
  ----------------------------------------- -------- ----------------------------
  UPHNO                                     NOT NULL NUMBER(10)		//User Phone Number (Foreign Key)
  TAG                                       NOT NULL NUMBER(10)		//User's Preffered Donor Phone Number (Foreign Key)
-
 Composite Primary Key (Uphno,Tag)
 
-HOSPITALS
-
+3) HOSPITALS
 SQL> desc HOSPITALS
  Name                                      Null?    Type
  ----------------------------------------- -------- ----------------------------
@@ -42,8 +40,7 @@ SQL> desc HOSPITALS
  HOSNAME                                            VARCHAR2(20)	//Hospital Name
  HOSLOCATION                                        VARCHAR2(20)	//Hospital Location
 
-BLOODCAMP
-
+4) BLOODCAMP
 SQL> desc BLOODCAMP
  Name                                      Null?    Type
  ----------------------------------------- -------- ----------------------------
@@ -51,8 +48,7 @@ SQL> desc BLOODCAMP
  SDATE                                              DATE		//Blood camp start Date
  EDATE                                              DATE		//Blood Camp End Date
 
-BLOODBANK
-
+5) BLOODBANK
 SQL> desc BloodBank
  Name                                      Null?    Type
  ----------------------------------------- -------- ----------------------------
@@ -66,24 +62,14 @@ SQL> desc BloodBank
  OP                                                 NUMBER		//Number of packets of O+Ve Blood
  ONE                                                NUMBER		//Number of packets of O-Ve Blood
 
-7. It will ask to insert one row for hosptials , blood bank and blood camp tables.
-        (if you want to insert more records execute the same file BloodBank.sql again)
-
-8. Exit from Oracle Environment
-
-9. Go to the Code Folder.
-
-10. Go to the file Main/Cpp/Main.cpp
-
-11. In the line 23, 
-
+Changes to code: 
+----------------
+In the file Main/Cpp/Main.cpp, line 23, 
  DB::initializeDBConnection((string)"hcu08orauser1d@unixdb",(string)"tcshyd");
 
-	change the "hcu08orauser1d@unixdb" to your oracle username and
-
-	change the "tcshyd" to your oracle password.
-
-12.Change Directory to HCU08_Group1_DIS Directory.
+Change this username and password to give access to your oracle database.
+	a) Change the "hcu08orauser1d@unixdb" to your oracle username and
+	b) Change the "tcshyd" to your oracle password.
 
 
 Code Compilation Procedures
