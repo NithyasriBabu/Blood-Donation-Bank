@@ -1,0 +1,52 @@
+Descriptions of the tables used in this project is defined below:
+
+1) USERDB:
+SQL> desc userdb
+ Name                                      Null?    Type
+ ----------------------------------------- -------- ----------------------------
+ UNAME                                              VARCHAR2(20)	//User Name
+ UPHNO                                     NOT NULL NUMBER(10)		//User Phone Number (Primary Key)
+ ULOCATION                                          VARCHAR2(20)	//User Location
+ UBL_GR                                             VARCHAR2(10)	//User Blood Group
+ STATUS                                             VARCHAR2(1)		//User Status (Donor/(Not Donor,Just a User))
+ LDOD                                               DATE		//User's Last Date of Blood Donation (if he is a Donor)
+ UPASS                                              VARCHAR2(10)	//User Login Password
+ LASTLOGIN                                          VARCHAR2(50)	//User Last Login Date and Time
+
+2) TAGGED
+SQL> desc TAGGED
+ Name                                      Null?    Type
+ ----------------------------------------- -------- ----------------------------
+ UPHNO                                     NOT NULL NUMBER(10)		//User Phone Number (Foreign Key)
+ TAG                                       NOT NULL NUMBER(10)		//User's Preffered Donor Phone Number (Foreign Key)
+Composite Primary Key (Uphno,Tag)
+
+3) HOSPITALS
+SQL> desc HOSPITALS
+ Name                                      Null?    Type
+ ----------------------------------------- -------- ----------------------------
+ HOSID                                     NOT NULL NUMBER(2)		//Hospital Id (Primary Key)
+ HOSNAME                                            VARCHAR2(20)	//Hospital Name
+ HOSLOCATION                                        VARCHAR2(20)	//Hospital Location
+
+4) BLOODCAMP
+SQL> desc BLOODCAMP
+ Name                                      Null?    Type
+ ----------------------------------------- -------- ----------------------------
+ HOSID                                              NUMBER(2)		//Hospital Id (Primary Key)
+ SDATE                                              DATE		//Blood camp start Date
+ EDATE                                              DATE		//Blood Camp End Date
+
+5) BLOODBANK
+SQL> desc BloodBank
+ Name                                      Null?    Type
+ ----------------------------------------- -------- ----------------------------
+ HOSID                                     NOT NULL NUMBER(2)		//Hospital Id (Primary Key)
+ AP                                                 NUMBER		//Number of packets of A+Ve Blood
+ AN                                                 NUMBER		//Number of packets of A-Ve Blood
+ BP                                                 NUMBER		//Number of packets of B+Ve Blood
+ BN                                                 NUMBER		//Number of packets of B-Ve Blood
+ ABP                                                NUMBER		//Number of packets of AB+Ve Blood
+ ABN                                                NUMBER		//Number of packets of AB-Ve Blood
+ OP                                                 NUMBER		//Number of packets of O+Ve Blood
+ ONE                                                NUMBER		//Number of packets of O-Ve Blood
