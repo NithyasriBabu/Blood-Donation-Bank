@@ -1,25 +1,15 @@
 Installtion Procedure for Database of Blood Bank
 ------------------------------------------------
-
-1. Login to Unix Server with your Credentials
-
-2. Copy the BloodBank.sql file to Current Directory 
-	(Current directory is one in which you start the SQLPLUS Command)
-
-	The file BloodBank.sql is found in the path HCU08_BloodBank/Code/BloodBank.sql
-
-3. Type Sqlplus Command
-
-4. Login to your Oracle Database with YOUR Credentials
-
-5. Run the BloodBank.sql file with the following Syntax
-
-	@BloodBank.sql
-
-6. The result will create all tables for the database. Tables created are
-
-USERDB
-
+1. Setup the Database:
+	a. Create all the databases using the BloodBank.sql file. 
+	b. Details of all the tables are below:
+		1. USERDB - Details about the user and information needed for the blood donation (Primary Key: Phone Number)
+		2. TAGGED - Each donor tags someone who they wish to be their donor
+		3. HOSPITALS - List of hospitals with its location
+		4. BLOODCAMP - Details about the blood donation camps held at registered hospitals 
+		5. BLOODBANK - Availability of each blood type at registerd hospitals
+	c. Insert data into HOSPITALS, BLOODBANK and BLOODCAMP tables
+	
 SQL> desc userdb
  Name                                      Null?    Type
  ----------------------------------------- -------- ----------------------------
@@ -75,8 +65,6 @@ SQL> desc BloodBank
  ABN                                                NUMBER		//Number of packets of AB-Ve Blood
  OP                                                 NUMBER		//Number of packets of O+Ve Blood
  ONE                                                NUMBER		//Number of packets of O-Ve Blood
-
-
 
 7. It will ask to insert one row for hosptials , blood bank and blood camp tables.
         (if you want to insert more records execute the same file BloodBank.sql again)
