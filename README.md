@@ -1,4 +1,4 @@
-# Setup to run BloodBank Project
+# Steps to run BloodBank Project
 ## Setup the Database:
 * Create all the databases using the BloodBank.sql file. 
 * Details of all the tables are below:
